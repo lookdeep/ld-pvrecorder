@@ -23,18 +23,24 @@ case $kernel in
         if [[ $bitwidth == "64" ]]; then
           arch_info=-$arch
         fi
-        IFS=$'\n'
-        read -r cpu_part_list <<< "$(cat /proc/cpuinfo | grep 'CPU part')"
-        cpu_part=$(awk -F' ' '{print $NF}' <<< $cpu_part_list)
-        case $cpu_part in
-            "0xb76") kernel="raspberry-pi" arch="arm11"$arch_info;;
-            "0xc07") kernel="raspberry-pi" arch="cortex-a7"$arch_info ;;
-            "0xd03") kernel="raspberry-pi" arch="cortex-a53"$arch_info ;;
-            "0xd07") kernel="jetson" arch="cortex-a57"$arch_info ;;
-            "0xd08") kernel="raspberry-pi" arch="cortex-a72"$arch_info ;;
-            "0xc08") kernel="beaglebone" arch=$arch_info ;;
-            *) exit 1;;
-        esac
+        cpu_part_list="$(cat /proc/cpuinfo | grep 'CPU part')":
+        found_cpu=0
+        while IFS= read -r part; do
+          cpu_part=$(awk -F' ' '{print $NF}' <<< $part)
+          case $cpu_part in
+            "0xb76") kernel="raspberry-pi" arch="arm11"$arch_info found_cpu=1;;
+            "0xc07") kernel="raspberry-pi" arch="cortex-a7"$arch_info found_cpu=1;;
+            "0xd03") kernel="raspberry-pi" arch="cortex-a53"$arch_info found_cpu=1;;
+            "0xd07") kernel="jetson" arch="cortex-a57"$arch_info found_cpu=1;;
+            "0xd08") kernel="raspberry-pi" arch="cortex-a72"$arch_info found_cpu=1;;
+            "0xd0b") kernel="raspberry-pi" arch="cortex-a72"$arch_info found_cpu=1;;
+            "0xc08") kernel="beaglebone" arch=$arch_info found_cpu=1;;
+            *) ;;
+          esac
+        done < <(printf '%s\n' "$cpu_part_list")
+        if [ $found_cpu -eq 0 ]; then
+          exit 1;
+        fi
     esac
     ;;
   *) exit 0;;
